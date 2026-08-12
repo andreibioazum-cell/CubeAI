@@ -149,6 +149,7 @@ class CaineEnv(gym.Env):
         self.pattern_name      = None
         self.last_pattern_name = None
         self.location_type     = None
+        self.fixed_location    = None   # если задана — локация не меняется весь запуск
         self.grid              = None
         self.position          = [0, 0, 0]
         self.steps             = 0
@@ -156,6 +157,8 @@ class CaineEnv(gym.Env):
         self.patterns_built    = 0
 
     def _pick_location(self):
+        if self.fixed_location is not None:
+            return self.fixed_location
         return random.choice(list(LOCATION_TYPES.keys()))
 
     def _next_pattern(self):
@@ -178,7 +181,8 @@ class CaineEnv(gym.Env):
 
         return random.choice(allowed) if allowed else 'corridor'
 
-    def reset(self, seed=None):
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
         if self.last_pattern_name is None or self.patterns_built >= 6:
             self.location_type  = self._pick_location()
             self.patterns_built = 0
@@ -248,23 +252,37 @@ class CaineEnv(gym.Env):
         self.steps   += 1
         reward        = 0
 
+        placed = False   # блок реально поставлен этим действием
+        miss   = False   # агент попытался построить и ошибся
+
         if already:
             reward -= 2.0
+            miss = True
         elif target_color == 0:
             reward += 0.3 if color == 5 else -0.5
         else:
             if color == target_color:
                 reward += 3.0
                 self.grid[row][col][height] = color
+                placed = True
                 reward += self._pattern_similarity() * 2.0
             else:
                 reward -= 1.5
+                miss = True
 
         done = self.steps >= self.max_steps
+        similarity = self._pattern_similarity()
 
         if done:
-            reward += self._pattern_similarity() * 10.0
+            reward += similarity * 10.0
             self.last_pattern_name  = self.pattern_name
             self.patterns_built    += 1
 
-        return self._get_obs(), reward, done, False, {}
+        info = {
+            'placed':     placed,
+            'miss':       miss,
+            'color':      int(color),
+            'target':     int(target_color),
+            'similarity': float(similarity),
+        }
+        return self._get_obs(), reward, done, False, info

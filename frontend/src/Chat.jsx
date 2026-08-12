@@ -1,63 +1,25 @@
-import { useEffect, useState, useRef } from 'react'
+import { useMemo } from 'react'
 
-const PHRASES = {
-  welcome: [
-    'Добро пожаловать в Удивительный Цифровой Цирк! Я ваш конферансье!',
-    'О, походу у нас новенький!',
-  ],
-  finished: [
-    'У меня отлично получается!',
-    'Смотри человек, я нарисовал пчелку!',
-  ],
-  thinking: [
-    'Это лишь головоломка которую надо решить!',
-  ]
-}
+// Чат в углу: реплики Кейна и Авеля пузырями своего цвета.
 
-export default function Chat({ event }) {
-  const [messages, setMessages] = useState([])
-  const bottomRef = useRef()
+const VISIBLE = 4
 
-  useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
-
-  useEffect(() => {
-    if (!event) return
-    let list = PHRASES[event]
-    if (!list) return
-    const phrase = list[Math.floor(Math.random() * list.length)]
-    setMessages(prev => [...prev, phrase])
-  }, [event])
+export default function Chat({ messages }) {
+  const items = useMemo(() => (messages || []).slice(-VISIBLE).map((raw, i) => {
+    const cut = raw.indexOf(': ')
+    const who = cut > 0 ? raw.slice(0, cut) : 'Кейн'
+    const text = cut > 0 ? raw.slice(cut + 2) : raw
+    return { key: `${i}-${raw}`, who, text, side: who === 'Авель' ? 'abel' : 'caine' }
+  }), [messages])
 
   return (
-    <div style={{
-      position: 'absolute',
-      bottom: 20,
-      left: 20,
-      zIndex: 10,
-      width: 420,
-      fontFamily: '"Courier New", monospace',
-    }}>
-      <div style={{
-        background: 'rgba(0,0,0,0.75)',
-        border: '2px solid #444',
-        padding: '8px 10px',
-        maxHeight: 160,
-        overflowY: 'auto',
-      }}>
-        {messages.map((msg, i) => (
-          <div key={i} style={{
-            color: '#ffff55',
-            fontSize: 13,
-            lineHeight: 1.7,
-            textShadow: '1px 1px 0px #000',
-          }}>
-            🎪 Кейн: {msg}
-          </div>
-        ))}
-        <div ref={bottomRef} />
-      </div>
+    <div className="chat spray">
+      {items.map(m => (
+        <div key={m.key} className={`bubble ${m.side}`}>
+          <span className="who">{m.who}</span>
+          {m.text}
+        </div>
+      ))}
     </div>
   )
 }

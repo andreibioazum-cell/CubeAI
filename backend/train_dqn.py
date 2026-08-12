@@ -1,6 +1,13 @@
+import sys
 import numpy as np
 from enviroment import CaineEnv
 from dqn_model import DQNAgent
+
+for _stream in (sys.stdout, sys.stderr):
+    try:
+        _stream.reconfigure(encoding="utf-8")
+    except (AttributeError, ValueError):
+        pass
 
 env = CaineEnv()
 obs_dim = env.observation_space.shape[0]

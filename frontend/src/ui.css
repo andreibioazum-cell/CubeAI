@@ -1,0 +1,342 @@
+@import url('/fonts/rubik-spray.css');
+
+/* Мультяшный интерфейс: толстая чёрная обводка, смещённая тень, лёгкий
+   наклон. Шрифт Rubik Spray Paint лежит локально — показ не должен
+   зависеть от интернета. */
+
+:root {
+  --caine: #ff4438;
+  --caine-dark: #b81f18;
+  --abel: #3d8bff;
+  --abel-dark: #1a4fb8;
+  --ink: #16121c;
+}
+
+.spray {
+  font-family: 'Rubik Spray Paint', 'Comic Sans MS', cursive;
+  letter-spacing: 0.02em;
+}
+
+/* Обводка тенью, а не -webkit-text-stroke.
+   Штрих у text-stroke ложится по центру контура буквы и при толщине 2–3px
+   слипает мелкие брызги, из которых состоит этот шрифт: обводка выглядит
+   рваной. Тень в восьми направлениях повторяет форму буквы как есть. */
+.outline {
+  text-shadow:
+    -2px -2px 0 var(--ink), 0 -2px 0 var(--ink), 2px -2px 0 var(--ink),
+    -2px 0 0 var(--ink), 2px 0 0 var(--ink),
+    -2px 2px 0 var(--ink), 0 2px 0 var(--ink), 2px 2px 0 var(--ink),
+    0 5px 0 rgba(0, 0, 0, 0.4);
+}
+
+.outline-thin {
+  text-shadow:
+    -1.5px -1.5px 0 var(--ink), 0 -1.5px 0 var(--ink), 1.5px -1.5px 0 var(--ink),
+    -1.5px 0 0 var(--ink), 1.5px 0 0 var(--ink),
+    -1.5px 1.5px 0 var(--ink), 0 1.5px 0 var(--ink), 1.5px 1.5px 0 var(--ink);
+}
+
+/* ── Верхняя панель ─────────────────────────────────────── */
+
+.topbar {
+  position: absolute;
+  top: 18px;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 26px;
+  pointer-events: none;
+}
+
+.side {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  width: 260px;
+}
+
+/* Кнопка строителя. Наклон в разные стороны — чтобы пара читалась как
+   нарисованная от руки, а не как две одинаковые плашки. */
+/* font-family обязателен явно: <button> не наследует шрифт от родителя,
+   поэтому надписи на кнопках оставались системным шрифтом, пока весь
+   остальной интерфейс шёл спреем. */
+.builder-btn {
+  font-family: 'Rubik Spray Paint', 'Comic Sans MS', cursive;
+  pointer-events: auto;
+  cursor: pointer;
+  border: none;
+  padding: 10px 34px;
+  font-size: 34px;
+  line-height: 1;
+  color: #fff;
+  border-radius: 14px;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.builder-btn.left { transform: rotate(-2.5deg); }
+.builder-btn.right { transform: rotate(2.5deg); }
+
+.builder-btn.caine {
+  background: linear-gradient(#ff6a5e, var(--caine));
+  box-shadow: 0 6px 0 var(--caine-dark), 0 0 0 4px var(--ink),
+              0 10px 22px rgba(0, 0, 0, 0.45);
+}
+
+.builder-btn.abel {
+  background: linear-gradient(#6fa8ff, var(--abel));
+  box-shadow: 0 6px 0 var(--abel-dark), 0 0 0 4px var(--ink),
+              0 10px 22px rgba(0, 0, 0, 0.45);
+}
+
+.builder-btn:hover { filter: brightness(1.08); }
+
+.builder-btn.left:active,
+.builder-btn.right:active {
+  transform: translateY(4px) rotate(0deg);
+  box-shadow: 0 2px 0 var(--ink), 0 0 0 4px var(--ink);
+}
+
+/* Неактивный строитель приглушён, но остаётся читаемым: это всё ещё
+   кнопка, а не подпись. */
+.builder-btn.off { filter: saturate(0.45) brightness(0.62); }
+
+/* Тема постройки — под кнопкой своего строителя. */
+.theme {
+  font-size: 15px;
+  color: #fff;
+  text-align: center;
+  max-width: 250px;
+  text-shadow: 2px 2px 0 var(--ink), -1px -1px 0 var(--ink),
+               1px -1px 0 var(--ink), -1px 1px 0 var(--ink);
+}
+
+.theme .sub {
+  display: block;
+  font-size: 11px;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+
+/* ── Счёт ───────────────────────────────────────────────── */
+
+.score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: 4px;
+}
+
+.score .digits {
+  font-size: 46px;
+  line-height: 1;
+  color: #fff;
+}
+
+.score .label {
+  font-size: 12px;
+  color: #ffd94a;
+  margin-top: 4px;
+  text-shadow: 1.5px 1.5px 0 var(--ink);
+}
+
+/* ── Кнопка «построить снова» ───────────────────────────── */
+
+.rebuild {
+  position: absolute;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-1.2deg);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.rebuild .hint {
+  font-size: 17px;
+  color: #fff;
+}
+
+.rebuild button {
+  font-family: 'Rubik Spray Paint', 'Comic Sans MS', cursive;
+  cursor: pointer;
+  border: none;
+  padding: 14px 44px;
+  font-size: 28px;
+  line-height: 1;
+  color: #fff;
+  border-radius: 16px;
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.rebuild button:hover { filter: brightness(1.08); }
+.rebuild button:active { transform: translateY(5px); }
+
+/* ── Чат ────────────────────────────────────────────────── */
+
+.chat {
+  position: absolute;
+  left: 20px;
+  bottom: 24px;
+  z-index: 15;
+  width: 400px;
+  /* Без обрезки по высоте: она рассекала верхний пузырь пополам, и от
+     него оставалась висящая в воздухе цветная полоса. Число реплик
+     ограничено в самом компоненте. */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 7px;
+  pointer-events: none;
+}
+
+/* Реплика — «пузырь» с хвостиком: у Кейна красный, у Авеля синий. */
+.bubble {
+  position: relative;
+  align-self: flex-start;
+  max-width: 96%;
+  padding: 8px 14px;
+  border-radius: 14px;
+  font-size: 15px;
+  color: #fff;
+  border: 3px solid var(--ink);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45);
+  text-shadow: 1.5px 1.5px 0 rgba(0, 0, 0, 0.55);
+  animation: pop 0.22s ease-out;
+}
+
+.bubble.caine { background: linear-gradient(#ff6a5e, var(--caine)); }
+.bubble.abel { background: linear-gradient(#6fa8ff, var(--abel)); }
+
+.bubble .who {
+  display: block;
+  font-size: 12px;
+  opacity: 0.9;
+  margin-bottom: 1px;
+}
+
+.bubble::after {
+  content: '';
+  position: absolute;
+  left: 16px;
+  bottom: -11px;
+  border-width: 8px 7px 0 7px;
+  border-style: solid;
+  border-color: var(--ink) transparent transparent transparent;
+}
+
+@keyframes pop {
+  from { transform: scale(0.9) translateY(6px); opacity: 0; }
+  to   { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+/* Старые реплики выцветают, чтобы взгляд держался на свежей. */
+.chat .bubble:nth-last-child(n + 3) { opacity: 0.6; }
+.chat .bubble:nth-last-child(n + 4) { opacity: 0.35; }
+
+/* ── Предупреждение об отвале бэкенда ───────────────────── */
+
+.offline {
+  position: absolute;
+  top: 18px;
+  right: 20px;
+  z-index: 30;
+  padding: 8px 16px;
+  font-size: 15px;
+  color: #fff;
+  background: linear-gradient(#ff6a5e, var(--caine));
+  border: 3px solid var(--ink);
+  border-radius: 12px;
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* ── Экран итога матча ──────────────────────────────────── */
+
+.victory {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Красная пелена наплывает, а не возникает: резкая вспышка на весь
+     экран после спокойной стройки выглядит как ошибка, а не как итог. */
+  background: radial-gradient(circle at 50% 42%,
+              rgba(190, 30, 26, 0.82), rgba(60, 8, 12, 0.94));
+  animation: veil 1.1s ease-out both;
+  backdrop-filter: blur(2px);
+}
+
+@keyframes veil {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.victory-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  animation: rise 0.9s 0.35s ease-out both;
+}
+
+@keyframes rise {
+  from { transform: translateY(28px) scale(0.94); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.victory-title {
+  font-size: 30px;
+  color: #ffd94a;
+  letter-spacing: 0.12em;
+}
+
+.victory-score {
+  font-size: 92px;
+  line-height: 1;
+  color: #fff;
+}
+
+/* Награда, а не кнопка: курсор обычный, нажатия не ловятся. */
+.victory-badge {
+  pointer-events: none;
+  cursor: default;
+  font-size: 44px;
+  padding: 12px 44px;
+  animation: sway 2.6s ease-in-out infinite;
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(-2.5deg); }
+  50%      { transform: rotate(2deg) translateY(-3px); }
+}
+
+.victory-sub {
+  font-size: 15px;
+  color: #ffe9a8;
+  opacity: 0.85;
+}
+
+.victory-again {
+  margin-top: 10px;
+  font-family: 'Rubik Spray Paint', 'Comic Sans MS', cursive;
+  cursor: pointer;
+  border: none;
+  padding: 14px 46px;
+  font-size: 28px;
+  line-height: 1;
+  color: #fff;
+  border-radius: 16px;
+  background: linear-gradient(#ffd05e, #ffab2e);
+  box-shadow: 0 6px 0 #a85f10, 0 0 0 4px var(--ink),
+              0 14px 30px rgba(0, 0, 0, 0.5);
+  transition: transform 0.12s ease, filter 0.12s ease;
+}
+
+.victory-again:hover { filter: brightness(1.08); }
+.victory-again:active { transform: translateY(5px); }

@@ -126,6 +126,6 @@ class DQNAgent:
         self.policy_net.load_state_dict(checkpoint["policy_net"])
         self.target_net.load_state_dict(checkpoint["target_net"])
         self.optimizer.load_state_dict(checkpoint["optimizer"])
-        self.epsilon = max(checkpoint.get("epsilon", self.epsilon_min), 0.3)
-        self.steps_done = 0
-        print(f"Загружено: {path}, epsilon={self.epsilon:.3f}")
+        self.epsilon = checkpoint.get("epsilon", self.epsilon_min)
+        self.steps_done = checkpoint.get("steps_done", 0)
+        print(f"Загружено: {path}, epsilon={self.epsilon:.3f}, steps={self.steps_done}")

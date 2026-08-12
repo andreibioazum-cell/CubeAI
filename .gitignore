@@ -23,3 +23,12 @@ Thumbs.db
 runs/
 checkpoints/
 backend/generated_patterns.json
+
+# Корпус обучения: 29 МБ, воспроизводится командой
+#   python collect_corpus.py 24000
+backend/corpus.jsonl
+backend/corpus.*.jsonl
+backend/archive.before-brains.json
+
+# Снимки экрана итога (пересоздаются через ?victory=)
+preview/

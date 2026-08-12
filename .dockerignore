@@ -1,0 +1,8 @@
+**/node_modules
+**/dist
+**/__pycache__
+backend/corpus*.jsonl
+backend/*.pt
+backend/*.pth
+preview/
+.git
