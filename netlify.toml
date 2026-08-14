@@ -1,0 +1,39 @@
+# Сайт целиком статический: Python работает у зрителя в браузере через
+# Pyodide, на стороне Netlify ничего не запускается.
+
+[build]
+  base = "frontend"
+  publish = "dist"
+  command = "npm run build"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Собранный JS и CSS лежат под хешем в имени: перезалив всегда даёт новое
+# имя, поэтому кешировать их можно навсегда.
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# Движок и архивы Кейна с Авелем меняются вместе с деплоем, а имена у них
+# постоянные — поэтому кеш перепроверяется, а не берётся вслепую.
+[[headers]]
+  for = "/py/*"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/tex/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/audio/*"
+  [headers.values]
+    Cache-Control = "public, max-age=604800"
+
+[[headers]]
+  for = "/fonts/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"

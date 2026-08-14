@@ -1,7 +1,15 @@
-# Ставить torch лучше отдельно, под свою CUDA:
-#   pip install torch --index-url https://download.pytorch.org/whl/cu128
-torch>=2.6
-gymnasium>=1.0
+# Для показа хватает numpy: эволюция, критик и мозги гуляк — это массивы
+# и обычные списки, никакого фреймворка глубокого обучения.
 numpy>=2.0
+
+# Необязательный режим с сервером (main.py). Для статического сайта не нужен.
 fastapi>=0.115
 uvicorn[standard]>=0.30
+
+# Генерация текстур блоков: python make_textures.py
+pillow>=10.0
+
+# Только для сети-проектировщика: train_designer.py и designer.py.
+# В браузере не работает и в показе не участвует, поэтому ставится отдельно:
+#   pip install torch --index-url https://download.pytorch.org/whl/cu128
+# torch>=2.6

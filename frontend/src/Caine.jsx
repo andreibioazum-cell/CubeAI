@@ -3,11 +3,8 @@ import { useRef, useEffect, useState, useMemo } from 'react'
 import * as THREE from 'three'
 import { OBJLoader } from 'three/examples/jsm/loaders/OBJLoader'
 import { MTLLoader } from 'three/examples/jsm/loaders/MTLLoader'
+import { api } from './engine'
 
-// В разработке фронтенд и бэкенд на разных портах, в сборке — на одном
-// адресе, поэтому база пустая.
-const API = import.meta.env.VITE_API
-  ?? (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '')
 const DEFAULT_TEMPO = 150
 
 export default function Caine({ onStep, onConnection, who = 'caine',
@@ -50,8 +47,7 @@ export default function Caine({ onStep, onConnection, who = 'caine',
 
   useEffect(() => {
     let cancelled = false
-    fetch(`${API}/config`)
-      .then(r => r.json())
+    api('/config')
       .then(c => { if (!cancelled) setTempo(c.tempo_ms || DEFAULT_TEMPO) })
       .catch(() => { if (!cancelled) setTempo(DEFAULT_TEMPO) })
     return () => { cancelled = true }
@@ -63,14 +59,12 @@ export default function Caine({ onStep, onConnection, who = 'caine',
     let inFlight = false
 
     const tick = async () => {
-      // Бэкенд может отвечать медленнее, чем тикает интервал —
-      // не наслаиваем запросы друг на друга.
+      // Смена карты занимает секунду с лишним — не наслаиваем шаги
+      // друг на друга, пока движок занят.
       if (inFlight) return
       inFlight = true
       try {
-        const res = await fetch(`${API}/step?who=${who}`)
-        if (!res.ok) throw new Error(`HTTP ${res.status}`)
-        const data = await res.json()
+        const data = await api('/step', { who })
         if (cancelled) return
 
         const dx = data.x - target.current.x
@@ -84,7 +78,7 @@ export default function Caine({ onStep, onConnection, who = 'caine',
         onConnRef.current?.(true)
         onStepRef.current?.(data)
       } catch (err) {
-        // Бэкенд не поднят или упал — не роняем сцену, просто ждём.
+        // Движок ещё грузится или споткнулся — не роняем сцену, ждём.
         if (!cancelled) onConnRef.current?.(false, err.message)
       } finally {
         inFlight = false

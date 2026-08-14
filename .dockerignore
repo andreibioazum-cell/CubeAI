@@ -3,6 +3,4 @@
 **/__pycache__
 backend/corpus*.jsonl
 backend/*.pt
-backend/*.pth
-preview/
 .git

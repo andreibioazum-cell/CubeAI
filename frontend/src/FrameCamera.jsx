@@ -1,15 +1,15 @@
 import { useEffect, useRef } from 'react'
 import { useThree, useFrame } from '@react-three/fiber'
 import * as THREE from 'three'
+import { framing } from './framing'
 
 // Камера смотрит на платформу того строителя, которого сейчас показывают,
 // и переезжает между платформами плавно, а не прыжком.
 
 const EASE = 2.4          // скорость переезда между платформами
-const MIN_SPAN = 24
 
 export default function FrameCamera({ bounds, controls, platformX = 0 }) {
-  const { camera } = useThree()
+  const { camera, size } = useThree()
   const want = useRef(null)
   const jump = useRef(true)
 
@@ -17,17 +17,17 @@ export default function FrameCamera({ bounds, controls, platformX = 0 }) {
     if (!bounds) return
     const cx = (bounds.minx + bounds.maxx) / 2 + platformX
     const cz = (bounds.minz + bounds.maxz) / 2
-    const span = Math.max(bounds.maxx - bounds.minx,
-                          bounds.maxz - bounds.minz, MIN_SPAN)
-    const dist = span * 1.15
+    const { dist, sideways } = framing(bounds, size.width / size.height)
 
     // Угол намеренно низкий (~30° над горизонтом): при взгляде почти
     // сверху высота стен и башен не читается, постройка выглядит плоской.
-    want.current = {
-      target: new THREE.Vector3(cx, 0, cz),
-      pos: new THREE.Vector3(cx, dist * 0.6, cz + dist * 1.05),
-      dist,
-    }
+    // Сторона захода выбирается так, чтобы длинная сторона постройки ушла
+    // в глубину кадра — иначе на вертикальном экране она не помещается.
+    const pos = sideways
+      ? new THREE.Vector3(cx + dist * 1.05, dist * 0.6, cz)
+      : new THREE.Vector3(cx, dist * 0.6, cz + dist * 1.05)
+
+    want.current = { target: new THREE.Vector3(cx, 0, cz), pos, dist }
     // Первый кадр ставим сразу: плавный переезд из нуля выглядел бы как
     // падение камеры с высоты.
     if (jump.current) {
@@ -38,7 +38,7 @@ export default function FrameCamera({ bounds, controls, platformX = 0 }) {
       }
       jump.current = false
     }
-  }, [bounds, camera, controls, platformX])
+  }, [bounds, camera, controls, platformX, size.width, size.height])
 
   useFrame((_, delta) => {
     const w = want.current

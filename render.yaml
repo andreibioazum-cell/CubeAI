@@ -1,8 +1,0 @@
-services:
-  - type: web
-    name: caine-ai
-    runtime: docker
-    plan: free
-    envVars:
-      - key: CAINE_EVOLVE_DUTY
-        value: "0.2"

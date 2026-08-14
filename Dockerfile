@@ -6,7 +6,10 @@ WORKDIR /web
 COPY frontend/package*.json ./
 RUN npm ci
 COPY frontend/ ./
-RUN npm run build
+# Серверная сборка: считает FastAPI, а не вкладка, поэтому Python в браузер
+# не едет и bundle_web.py не нужен — в node-образе его нечем запускать.
+ENV VITE_SERVER=1
+RUN npm run build:server
 
 FROM python:3.11-slim
 WORKDIR /app

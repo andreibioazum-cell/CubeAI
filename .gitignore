@@ -22,13 +22,16 @@ Thumbs.db
 *.log
 runs/
 checkpoints/
-backend/generated_patterns.json
 
-# Корпус обучения: 29 МБ, воспроизводится командой
+# Корпус для обучения сети-проектировщика: 29 МБ, воспроизводится командой
 #   python collect_corpus.py 24000
 backend/corpus.jsonl
 backend/corpus.*.jsonl
-backend/archive.before-brains.json
 
-# Снимки экрана итога (пересоздаются через ?victory=)
-preview/
+# Питоновская часть, скопированная для браузера: собирается заново
+#   npm run bundle
+frontend/public/py/
+
+# Фоновая музыка: дорожка своя у каждого, в репозиторий не кладётся.
+# Положите свой theme.mp3 сюда — без него сайт работает молча.
+frontend/public/audio/

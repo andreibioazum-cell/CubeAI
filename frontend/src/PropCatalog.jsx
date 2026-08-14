@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { OrbitControls } from '@react-three/drei'
 import Decorations from './Decorations'
+import { api } from './engine'
 
 // Каталог придуманного реквизита: ?props=1
 // Нужен для проверки глазами: на общем плане предмет ростом в полтора
 // блока не отличить от акцента здания.
 
-const API = 'http://127.0.0.1:8000'
 const PALETTE = { wall: '#8a8f9c', floor: '#4a4e58', accent: '#d8b45a' }
 const STEP = 3
 
@@ -15,8 +15,7 @@ export default function PropCatalog() {
   const [items, setItems] = useState([])
 
   useEffect(() => {
-    fetch(`${API}/props`)
-      .then(r => r.json())
+    api('/props')
       .then(d => setItems(d.props || []))
       .catch(() => setItems([]))
   }, [])

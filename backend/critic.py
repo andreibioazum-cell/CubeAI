@@ -2,9 +2,9 @@
 
 import math
 import random
-from collections import Counter, deque
+from collections import Counter
 
-from modules import MODULES, TILE, DELTA, OPPOSITE, sockets
+from modules import MODULES, DELTA, OPPOSITE, sockets
 import walkers
 
 # Веса слагаемых. Сумма положительных ≈ 1.0, штрафы вычитаются сверху.
@@ -111,14 +111,8 @@ def spread_ratio(level):
 # Оценка
 # ─────────────────────────────────────────────────────────────
 
-def evaluate(level, rng=None, clip_score=None, human_score=None, with_taste=False):
+def evaluate(level, rng=None, clip_score=None, human_score=None):
     """Оценить карту. Возвращает счёт, слагаемые и причину отказа."""
-    if with_taste and clip_score is None:
-        try:
-            from clip_taste import taste
-            clip_score = taste(level)
-        except Exception:
-            clip_score = None
     rng = rng or random.Random(0)
     dist = level.distances()
     d = level.descriptor

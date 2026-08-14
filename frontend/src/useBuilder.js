@@ -1,11 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
+import { api } from './engine'
 
 // Состояние одного строителя: его карта, его блоки, его гуляки.
-
-// В разработке фронтенд и бэкенд на разных портах, в сборке — на одном
-// адресе, поэтому база пустая.
-const API = import.meta.env.VITE_API
-  ?? (import.meta.env.DEV ? 'http://127.0.0.1:8000' : '')
 
 // Блоки группируются по паре (форма + цвет) для инстансинга, попутно
 // собирается множество занятых клеток.
@@ -26,6 +22,11 @@ function buildScene(blocks) {
 }
 
 const EMPTY_SCENE = { groups: [], occupied: new Set() }
+
+// Молча проглоченная ошибка выглядит как зависание: стройка стоит, счёт
+// не растёт, а в консоли пусто. Причина должна оставаться хотя бы там.
+const complain = (what, who) => (err) =>
+  console.error(`[${who}] ${what}: ${err?.message || err}`)
 
 export default function useBuilder(who, { onSay } = {}) {
   const blocksRef = useRef(new Map())
@@ -54,21 +55,19 @@ export default function useBuilder(who, { onSay } = {}) {
     if (lv) setLevel(lv)
   }, [])
 
-  // Перечитать карту, назначенную сервером. Нужно, когда карту сменил не
-  // фронтенд, а сервер — например, при начале нового матча.
+  // Перечитать карту, назначенную движком. Нужно, когда карту сменил не
+  // интерфейс, а сам движок — например, при начале нового матча.
   const reload = useCallback(() => {
-    fetch(`${API}/level?who=${who}`)
-      .then(r => r.json())
+    api('/level', { who })
       .then(lv => { if (lv) applyNewLevel(lv) })
-      .catch(() => {})
+      .catch(complain('карта не перечиталась', who))
   }, [who, applyNewLevel])
 
   // Что уже построено к моменту загрузки страницы: без этого перезагрузка
   // теряла бы получасовую стройку.
   useEffect(() => {
     let cancelled = false
-    fetch(`${API}/level?who=${who}`)
-      .then(r => r.json())
+    api('/level', { who })
       .then(lv => {
         if (cancelled || !lv) return
         setLevel(lv)
@@ -82,7 +81,7 @@ export default function useBuilder(who, { onSay } = {}) {
           setScene(buildScene(blocksRef.current))
         }
       })
-      .catch(() => {})
+      .catch(complain('карта не загрузилась', who))
     return () => { cancelled = true }
   }, [who])
 
@@ -91,10 +90,9 @@ export default function useBuilder(who, { onSay } = {}) {
   useEffect(() => {
     if (!awaiting) return
     let dropped = false
-    fetch(`${API}/walk?who=${who}`)
-      .then(r => r.json())
+    api('/walk', { who })
       .then(d => { if (!dropped && d.ok) setWalk(d) })
-      .catch(() => {})
+      .catch(complain('гуляки не пошли', who))
     return () => { dropped = true }
   }, [awaiting, who])
 
@@ -143,10 +141,9 @@ export default function useBuilder(who, { onSay } = {}) {
   }, [say, applyNewLevel])
 
   const startNew = useCallback(() => {
-    fetch(`${API}/next?who=${who}`)
-      .then(r => r.json())
+    api('/next', { who })
       .then(res => { if (res.ok) applyNewLevel(res.level) })
-      .catch(() => {})
+      .catch(complain('новая карта не спроектировалась', who))
   }, [applyNewLevel, who])
 
   return {
