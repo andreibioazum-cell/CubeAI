@@ -1,0 +1,1103 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="theme-color" content="#120e1a" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <title>CaineAI — Кейн и Авель строят</title>
+  <style>
+    :root {
+      --caine: #ff4438;
+      --caine-dark: #b81f18;
+      --abel: #3d8bff;
+      --abel-dark: #1a4fb8;
+      --ink: #16121c;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body {
+      margin: 0; padding: 0; width: 100%; height: 100%;
+      overflow: hidden; background: #111; color: #e8e8e8;
+      font-family: "Comic Sans MS", "Chalkboard SE", "Marker Felt", cursive;
+      touch-action: none; user-select: none;
+    }
+    canvas { display: block; }
+    .spray { letter-spacing: 0.02em; }
+    .outline {
+      text-shadow:
+        -2px -2px 0 var(--ink), 0 -2px 0 var(--ink), 2px -2px 0 var(--ink),
+        -2px 0 0 var(--ink), 2px 0 0 var(--ink),
+        -2px 2px 0 var(--ink), 0 2px 0 var(--ink), 2px 2px 0 var(--ink),
+        0 5px 0 rgba(0,0,0,.4);
+    }
+    .outline-thin {
+      text-shadow:
+        -1.5px -1.5px 0 var(--ink), 0 -1.5px 0 var(--ink), 1.5px -1.5px 0 var(--ink),
+        -1.5px 0 0 var(--ink), 1.5px 0 0 var(--ink),
+        -1.5px 1.5px 0 var(--ink), 0 1.5px 0 var(--ink), 1.5px 1.5px 0 var(--ink);
+    }
+    .topbar {
+      position: absolute; top: calc(10px + env(safe-area-inset-top));
+      left: 0; right: 0; z-index: 20;
+      display: flex; justify-content: center; align-items: flex-start;
+      gap: 8px; pointer-events: none;
+      padding: 0 calc(8px + env(safe-area-inset-left));
+    }
+    .side {
+      display: flex; flex-direction: column; align-items: center;
+      gap: 6px; flex: 1 1 0; min-width: 0;
+    }
+    .builder-btn {
+      pointer-events: auto; cursor: pointer; border: none;
+      padding: 8px 14px; font-size: 22px; line-height: 1; color: #fff;
+      border-radius: 12px;
+      font-family: inherit;
+      transition: transform .12s ease, filter .12s ease;
+    }
+    .builder-btn.left { transform: rotate(-2.5deg); }
+    .builder-btn.right { transform: rotate(2.5deg); }
+    .builder-btn.caine {
+      background: linear-gradient(#ff6a5e, var(--caine));
+      box-shadow: 0 5px 0 var(--caine-dark), 0 0 0 3px var(--ink), 0 8px 16px rgba(0,0,0,.45);
+    }
+    .builder-btn.abel {
+      background: linear-gradient(#6fa8ff, var(--abel));
+      box-shadow: 0 5px 0 var(--abel-dark), 0 0 0 3px var(--ink), 0 8px 16px rgba(0,0,0,.45);
+    }
+    .builder-btn.off { filter: saturate(.45) brightness(.62); }
+    .builder-btn:active { transform: translateY(3px) rotate(0); }
+    .theme {
+      font-size: 11px; color: #fff; text-align: center; max-width: 100%;
+      line-height: 1.25;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+      text-shadow: 2px 2px 0 var(--ink), -1px -1px 0 var(--ink);
+    }
+    .score { display: flex; flex-direction: column; align-items: center; margin-top: 2px; }
+    .score .digits { font-size: 28px; line-height: 1; color: #fff; }
+    .score .label { font-size: 10px; color: #ffd94a; margin-top: 2px; text-shadow: 1.5px 1.5px 0 var(--ink); }
+    .pbar-row { display: flex; align-items: center; gap: 5px; width: 100%; max-width: 180px; }
+    .pbar {
+      flex: 1; height: 13px; border: 2px solid var(--ink); border-radius: 999px;
+      background: rgba(0,0,0,.45); overflow: hidden;
+    }
+    .pbar i { display: block; height: 100%; transition: width .25s linear; }
+    .pbar-row.caine .pbar i { background: linear-gradient(#ff8a80, var(--caine)); }
+    .pbar-row.abel .pbar i { background: linear-gradient(#8fc0ff, var(--abel)); }
+    .pbar-row .pct { min-width: 32px; font-size: 12px; color: #fff; text-align: right; }
+    .chat {
+      position: absolute;
+      left: calc(10px + env(safe-area-inset-left));
+      right: calc(10px + env(safe-area-inset-right));
+      bottom: calc(84px + env(safe-area-inset-bottom));
+      z-index: 15; display: flex; flex-direction: column; justify-content: flex-end;
+      gap: 6px; pointer-events: none;
+    }
+    .bubble {
+      align-self: flex-start; max-width: 92%;
+      padding: 6px 12px; border-radius: 14px; font-size: 13px; color: #fff;
+      border: 2px solid var(--ink); box-shadow: 0 4px 0 rgba(0,0,0,.45);
+      text-shadow: 1.5px 1.5px 0 rgba(0,0,0,.55);
+      animation: pop .22s ease-out; position: relative;
+    }
+    .bubble.caine { background: linear-gradient(#ff6a5e, var(--caine)); }
+    .bubble.abel { background: linear-gradient(#6fa8ff, var(--abel)); }
+    .bubble .who { display: block; font-size: 10px; opacity: .9; margin-bottom: 1px; }
+    .bubble::after {
+      content: ''; position: absolute; left: 16px; bottom: -9px;
+      border-width: 8px 7px 0 7px; border-style: solid;
+      border-color: var(--ink) transparent transparent transparent;
+    }
+    .chat .bubble:nth-last-child(n + 3) { display: none; }
+    @keyframes pop {
+      from { transform: scale(.9) translateY(6px); opacity: 0; }
+      to { transform: scale(1) translateY(0); opacity: 1; }
+    }
+    .rebuild {
+      position: absolute; bottom: calc(14px + env(safe-area-inset-bottom));
+      left: 50%; transform: translateX(-50%) rotate(-1.2deg);
+      z-index: 20; display: none; flex-direction: column; align-items: center; gap: 5px;
+    }
+    .rebuild.show { display: flex; }
+    .rebuild .hint { font-size: 13px; color: #fff; }
+    .rebuild button {
+      font-family: inherit; cursor: pointer; border: none;
+      padding: 12px 28px; font-size: 22px; line-height: 1; color: #fff;
+      border-radius: 14px;
+    }
+    .rebuild button:active { transform: translateY(4px); }
+    .offline {
+      display: none; position: absolute;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      left: 10px; right: 10px; z-index: 30;
+      padding: 8px 14px; font-size: 13px; color: #fff; text-align: center;
+      background: linear-gradient(#ff6a5e, var(--caine));
+      border: 3px solid var(--ink); border-radius: 12px;
+    }
+    .offline.show { display: block; }
+    .boot {
+      position: fixed; inset: 0; z-index: 100;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 18px;
+      background: radial-gradient(circle at 50% 38%, #2a1f3d 0%, #120e1a 70%);
+    }
+    .boot.hide { display: none; }
+    .boot-title {
+      font-size: clamp(44px, 12vw, 84px); line-height: 1; color: var(--caine);
+      transform: rotate(-3deg); animation: sway 3.4s ease-in-out infinite;
+    }
+    .boot-title .b { color: var(--abel); }
+    @keyframes sway {
+      0%, 100% { transform: rotate(-3deg); }
+      50% { transform: rotate(2deg) translateY(-3px); }
+    }
+    .boot-sub { font-size: 18px; color: #fff; }
+    .boot-bar {
+      width: min(320px, 70vw); height: 14px; border: 3px solid var(--ink);
+      border-radius: 999px; background: rgba(0,0,0,.4); overflow: hidden;
+    }
+    .boot-bar i {
+      display: block; width: 42%; height: 100%; border-radius: 999px;
+      background: linear-gradient(90deg, var(--caine), #ffd05e, var(--abel));
+      animation: boot-slide 1.5s ease-in-out infinite;
+    }
+    @keyframes boot-slide {
+      0% { transform: translateX(-105%); }
+      100% { transform: translateX(240%); }
+    }
+    .boot-note { font-size: 12px; color: #b9b3c8; max-width: 420px; text-align: center; padding: 0 24px; line-height: 1.45; }
+    .boot-error { color: #ffb0a8; font-size: 14px; max-width: 420px; text-align: center; padding: 0 20px; }
+    .victory {
+      display: none; position: absolute; inset: 0; z-index: 40;
+      align-items: center; justify-content: center;
+      background: radial-gradient(circle at 50% 42%, rgba(190,30,26,.82), rgba(60,8,12,.94));
+      animation: veil 1.1s ease-out both;
+    }
+    .victory.show { display: flex; }
+    @keyframes veil { from { opacity: 0; } to { opacity: 1; } }
+    .victory-inner { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+    .victory-title { font-size: 22px; color: #ffd94a; letter-spacing: .1em; }
+    .victory-score { font-size: 64px; line-height: 1; color: #fff; }
+    .victory-badge { pointer-events: none; font-size: 30px; padding: 10px 28px; animation: sway 2.6s ease-in-out infinite; }
+    .victory-sub { font-size: 13px; color: #ffe9a8; text-align: center; padding: 0 18px; }
+    .victory-again {
+      margin-top: 8px; font-family: inherit; cursor: pointer; border: none;
+      padding: 12px 32px; font-size: 22px; color: #fff; border-radius: 14px;
+      background: linear-gradient(#ffd05e, #ffab2e);
+      box-shadow: 0 6px 0 #a85f10, 0 0 0 4px var(--ink), 0 12px 24px rgba(0,0,0,.5);
+    }
+    @media (min-width: 861px) {
+      .topbar { gap: 26px; top: 18px; }
+      .side { width: 260px; flex: none; }
+      .builder-btn { padding: 10px 34px; font-size: 34px; }
+      .theme { font-size: 15px; max-width: 250px; }
+      .score .digits { font-size: 46px; }
+      .score .label { font-size: 12px; }
+      .pbar { height: 17px; border-width: 3px; }
+      .pbar-row .pct { font-size: 16px; }
+      .chat {
+        left: 20px; right: auto; bottom: 24px; width: 400px;
+      }
+      .chat .bubble:nth-last-child(n + 3) { display: block; opacity: .6; }
+      .chat .bubble:nth-last-child(n + 4) { display: none; }
+      .bubble { font-size: 15px; padding: 8px 14px; }
+      .rebuild { bottom: 30px; }
+      .rebuild .hint { font-size: 17px; }
+      .rebuild button { font-size: 28px; padding: 14px 44px; }
+    }
+    @media (max-height: 480px) and (pointer: coarse) {
+      .topbar { top: 6px; }
+      .builder-btn { padding: 5px 9px; font-size: 17px; }
+      .theme { font-size: 9px; }
+      .score .digits { font-size: 21px; }
+      .chat { bottom: calc(70px + env(safe-area-inset-bottom)); }
+      .chat .bubble:nth-last-child(n + 2) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="boot" class="boot">
+    <div class="boot-title outline spray">Caine<span class="b">AI</span></div>
+    <div id="boot-sub" class="boot-sub outline spray">Бужу Кейна и Авеля…</div>
+    <div class="boot-bar"><i></i></div>
+    <div id="boot-note" class="boot-note">
+      Python считает на телефоне, сцена рисуется здесь. Первый запуск — пара секунд на карту.
+    </div>
+    <div id="boot-error" class="boot-error" hidden></div>
+  </div>
+
+  <div id="ui" hidden>
+    <div class="topbar spray">
+      <div class="side">
+        <button id="btn-caine" class="builder-btn outline caine left">Caine</button>
+        <div id="theme-caine" class="theme">—</div>
+        <div class="pbar-row caine">
+          <div class="pbar"><i id="bar-caine" style="width:0%"></i></div>
+          <span id="pct-caine" class="pct outline-thin">0%</span>
+        </div>
+      </div>
+      <div id="score-box" class="score" hidden>
+        <div id="score-digits" class="digits outline">0 : 0</div>
+        <div id="score-label" class="label">раунд 1 из 5</div>
+      </div>
+      <div id="side-abel" class="side" hidden>
+        <button id="btn-abel" class="builder-btn outline abel right off">Abel</button>
+        <div id="theme-abel" class="theme">—</div>
+        <div class="pbar-row abel">
+          <div class="pbar"><i id="bar-abel" style="width:0%"></i></div>
+          <span id="pct-abel" class="pct outline-thin">0%</span>
+        </div>
+      </div>
+    </div>
+
+    <div id="chat" class="chat spray"></div>
+    <div id="offline" class="offline spray">Движок споткнулся — перезапусти main.py</div>
+
+    <div id="rebuild" class="rebuild spray">
+      <div id="rebuild-hint" class="hint outline-thin">Считаю раунд…</div>
+      <button id="rebuild-btn" class="outline">Следующий раунд</button>
+    </div>
+
+    <div id="victory" class="victory spray">
+      <div class="victory-inner">
+        <div id="victory-title" class="victory-title outline">Победа</div>
+        <div id="victory-score" class="victory-score outline">0 : 0</div>
+        <div id="victory-badge" class="builder-btn outline caine left victory-badge">Caine</div>
+        <div class="victory-sub outline-thin">матч из 5 раундов сыгран</div>
+        <button id="victory-again" class="victory-again outline">Играть снова</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://unpkg.com/three@0.160.1/build/three.min.js"></script>
+  <script src="https://unpkg.com/three@0.160.1/examples/js/controls/OrbitControls.js"></script>
+  <script>
+(function () {
+  'use strict';
+
+  var PHRASES = {
+    welcome: [
+      'Добро пожаловать в Удивительный Цифровой Цирк! Я ваш конферансье!',
+      'О, походу у нас новенький!'
+    ],
+    finished: [
+      'Готово! Заходите, не стесняйтесь!',
+      'У меня отлично получается!',
+      'Вход там, внизу. Сундук я спрятал подальше.'
+    ],
+    thinking: [
+      'Это лишь головоломка которую надо решить!',
+      'Так, где я оставил тот коридор...',
+      'Ещё пара стен и будет красиво.'
+    ]
+  };
+  var phraseCur = {};
+  function nextPhrase(ev) {
+    var list = PHRASES[ev];
+    if (!list || !list.length) return null;
+    var i = phraseCur[ev] || 0;
+    phraseCur[ev] = (i + 1) % list.length;
+    return list[i];
+  }
+
+  var ROUND_RESULT = {
+    caine: 'Раунд взял Кейн',
+    abel: 'Раунд взял Авель',
+    'ничья': 'Ничья — счёт не изменился',
+    'нет карты': 'Раунд не засчитан'
+  };
+
+  var PLATFORM_GAP = 90;
+  var FIELD = 80;
+  var FOV = 50;
+  var MIN_SPAN = 18;
+  var SQUASH = 0.55;
+
+  function api(route, params) {
+    var qs = '';
+    if (params) {
+      var parts = [];
+      for (var k in params) {
+        if (params[k] !== undefined && params[k] !== null)
+          parts.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k]));
+      }
+      if (parts.length) qs = '?' + parts.join('&');
+    }
+    return fetch(route + qs).then(function (res) {
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return res.json();
+    });
+  }
+
+  function framing(bounds, aspect) {
+    var spanX = Math.max(bounds.maxx - bounds.minx, MIN_SPAN);
+    var spanZ = Math.max(bounds.maxz - bounds.minz, MIN_SPAN);
+    var halfV = Math.tan((FOV / 2) * Math.PI / 180);
+    var halfH = halfV * Math.max(aspect, 0.2);
+    function need(across, deep) {
+      return Math.max((across / 2) / halfH, (deep / 2) * SQUASH / halfV) * 1.08;
+    }
+    var floor = Math.max(spanX, spanZ) * 1.15;
+    var front = Math.max(floor, need(spanX, spanZ));
+    var side = Math.max(floor, need(spanZ, spanX));
+    return side < front
+      ? { dist: side, sideways: true }
+      : { dist: front, sideways: false };
+  }
+
+  function makeTex(color, role) {
+    var c = document.createElement('canvas');
+    c.width = c.height = 32;
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 32, 32);
+    ctx.globalAlpha = 0.22;
+    if (role === 2) {
+      ctx.fillStyle = '#000';
+      for (var i = 0; i < 32; i += 8) ctx.fillRect(i, 0, 1, 32);
+      for (var j = 0; j < 32; j += 8) ctx.fillRect(0, j, 32, 1);
+    } else if (role === 3) {
+      ctx.fillStyle = '#fff';
+      for (var y = 0; y < 32; y += 4) ctx.fillRect(0, y, 32, 1);
+    } else {
+      ctx.fillStyle = '#000';
+      for (var row = 0; row < 32; row += 8) {
+        ctx.fillRect(0, row, 32, 1);
+        var off = (row / 8) % 2 ? 8 : 0;
+        for (var x = off; x < 32; x += 16) ctx.fillRect(x, row, 1, 8);
+      }
+    }
+    ctx.globalAlpha = 1;
+    var tex = new THREE.CanvasTexture(c);
+    tex.magFilter = THREE.NearestFilter;
+    tex.minFilter = THREE.NearestFilter;
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    return tex;
+  }
+
+  var texCache = {};
+  function texFor(color, role) {
+    var key = color + '|' + role;
+    if (!texCache[key]) texCache[key] = makeTex(color, role);
+    return texCache[key];
+  }
+
+  function makeSky(color) {
+    var base = new THREE.Color(color);
+    var hsl = {};
+    base.getHSL(hsl);
+    var top = new THREE.Color().setHSL(hsl.h, Math.min(1, hsl.s * 1.25), Math.max(0.14, hsl.l * 0.8));
+    var horizon = new THREE.Color().setHSL((hsl.h + 0.03) % 1, Math.min(1, hsl.s * 1.05), Math.min(0.95, hsl.l * 1.5 + 0.34));
+    var ground = new THREE.Color().setHSL(hsl.h, hsl.s * 0.6, Math.max(0.03, hsl.l * 0.3));
+    var mat = new THREE.ShaderMaterial({
+      uniforms: {
+        top: { value: top },
+        horizon: { value: horizon },
+        ground: { value: ground }
+      },
+      vertexShader: 'varying vec3 vPos; void main(){ vPos=position; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0); }',
+      fragmentShader: 'uniform vec3 top; uniform vec3 horizon; uniform vec3 ground; varying vec3 vPos; void main(){ float h=normalize(vPos).y; vec3 col=h>0.0?mix(horizon,top,pow(clamp(h,0.0,1.0),0.55)):mix(horizon,ground,pow(clamp(-h,0.0,1.0),0.45)); gl_FragColor=vec4(col,1.0); }',
+      side: THREE.BackSide,
+      depthWrite: false,
+      toneMapped: false
+    });
+    var mesh = new THREE.Mesh(new THREE.SphereGeometry(600, 24, 16), mat);
+    mesh.frustumCulled = false;
+    mesh.renderOrder = -1;
+    mesh.scale.x = -1;
+    return mesh;
+  }
+
+  function makeBuilderMesh(tint) {
+    var g = new THREE.Group();
+    var body = new THREE.Mesh(
+      new THREE.BoxGeometry(0.55, 0.85, 0.4),
+      new THREE.MeshStandardMaterial({ color: tint, roughness: 0.55 })
+    );
+    body.position.y = 0.55;
+    var head = new THREE.Mesh(
+      new THREE.SphereGeometry(0.28, 12, 10),
+      new THREE.MeshStandardMaterial({ color: '#f3d2b3', roughness: 0.6 })
+    );
+    head.position.y = 1.18;
+    var hatBrim = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.38, 0.38, 0.06, 16),
+      new THREE.MeshStandardMaterial({ color: tint, roughness: 0.4 })
+    );
+    hatBrim.position.y = 1.42;
+    var hat = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.22, 0.24, 0.38, 16),
+      new THREE.MeshStandardMaterial({ color: tint, roughness: 0.4 })
+    );
+    hat.position.y = 1.62;
+    var band = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.245, 0.245, 0.07, 16),
+      new THREE.MeshStandardMaterial({ color: '#ffd23f', roughness: 0.4, emissive: '#ffd23f', emissiveIntensity: 0.25 })
+    );
+    band.position.y = 1.46;
+    g.add(body, head, hatBrim, hat, band);
+    g.traverse(function (n) { if (n.isMesh) { n.castShadow = true; n.receiveShadow = true; } });
+    return g;
+  }
+
+  function makeProp(type, accent) {
+    var g = new THREE.Group();
+    var acc = accent || '#ffd23f';
+    function add(mesh) { g.add(mesh); return mesh; }
+    if (type === 'tent') {
+      add(new THREE.Mesh(new THREE.ConeGeometry(0.7, 1.4, 10), new THREE.MeshStandardMaterial({ color: '#d93b3b' }))).position.y = 0.7;
+      add(new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), new THREE.MeshStandardMaterial({ color: acc, emissive: acc, emissiveIntensity: 0.6 }))).position.y = 1.5;
+    } else if (type === 'crystal') {
+      add(new THREE.Mesh(new THREE.OctahedronGeometry(0.45), new THREE.MeshStandardMaterial({ color: acc, emissive: acc, emissiveIntensity: 0.5, flatShading: true }))).position.y = 0.55;
+    } else if (type === 'lantern') {
+      add(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1.0, 8), new THREE.MeshStandardMaterial({ color: '#3a3a3a' }))).position.y = 0.5;
+      add(new THREE.Mesh(new THREE.SphereGeometry(0.2, 8, 8), new THREE.MeshStandardMaterial({ color: '#ffe9a8', emissive: acc, emissiveIntensity: 1.0 }))).position.y = 1.15;
+    } else if (type === 'flag') {
+      add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.8, 6), new THREE.MeshStandardMaterial({ color: '#5a4632' }))).position.y = 0.9;
+      add(new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.42, 0.04), new THREE.MeshStandardMaterial({ color: acc, side: THREE.DoubleSide }))).position.set(0.38, 1.5, 0);
+    } else if (type === 'bush') {
+      add(new THREE.Mesh(new THREE.SphereGeometry(0.32, 8, 8), new THREE.MeshStandardMaterial({ color: '#3f7a3f', flatShading: true }))).position.y = 0.28;
+      add(new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), new THREE.MeshStandardMaterial({ color: '#356b35', flatShading: true }))).position.set(0.2, 0.22, 0.12);
+    } else if (type === 'statue') {
+      add(new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.22, 0.55), new THREE.MeshStandardMaterial({ color: '#7a7a82' }))).position.y = 0.11;
+      add(new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.7, 0.28), new THREE.MeshStandardMaterial({ color: '#9a9aa2' }))).position.y = 0.57;
+      add(new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), new THREE.MeshStandardMaterial({ color: acc }))).position.y = 1.08;
+    } else if (type === 'lollipop') {
+      add(new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 1.1, 8), new THREE.MeshStandardMaterial({ color: '#fff0f6' }))).position.y = 0.55;
+      var tor = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.12, 8, 16), new THREE.MeshStandardMaterial({ color: acc }));
+      tor.rotation.x = Math.PI / 2;
+      tor.position.y = 1.2;
+      add(tor);
+    } else if (type === 'barrel') {
+      add(new THREE.Mesh(new THREE.CylinderGeometry(0.26, 0.24, 0.55, 10), new THREE.MeshStandardMaterial({ color: '#7a5230' }))).position.y = 0.28;
+    } else if (type === 'tree') {
+      add(new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.14, 0.7, 8), new THREE.MeshStandardMaterial({ color: '#6b4226' }))).position.y = 0.35;
+      add(new THREE.Mesh(new THREE.ConeGeometry(0.5, 1.1, 8), new THREE.MeshStandardMaterial({ color: '#2f7a3a', flatShading: true }))).position.y = 1.15;
+    } else {
+      add(new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.4, 0.4), new THREE.MeshStandardMaterial({ color: '#c9a227' }))).position.y = 0.2;
+      add(new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.08, 0.42), new THREE.MeshStandardMaterial({ color: '#8a6a12' }))).position.y = 0.42;
+    }
+    g.traverse(function (n) { if (n.isMesh) n.castShadow = true; });
+    return g;
+  }
+
+  function makePlatform(dim) {
+    var g = new THREE.Group();
+    var grid = new THREE.GridHelper(FIELD, FIELD / 2, dim ? '#3a3a4a' : '#5a5a72', dim ? '#2c2c3a' : '#454558');
+    var mesh = new THREE.Mesh(
+      new THREE.PlaneGeometry(FIELD, FIELD),
+      new THREE.MeshStandardMaterial({ color: dim ? '#2a2a38' : '#3d3d50', roughness: 0.95 })
+    );
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.y = -0.01;
+    mesh.receiveShadow = true;
+    g.add(grid, mesh);
+    return g;
+  }
+
+  function BlockPool() {
+    this.groups = {};
+    this.root = new THREE.Group();
+    this.dummy = new THREE.Object3D();
+  }
+  BlockPool.prototype.clear = function () {
+    for (var k in this.groups) {
+      var g = this.groups[k];
+      this.root.remove(g.mesh);
+      g.mesh.geometry.dispose();
+      g.mesh.material.dispose();
+    }
+    this.groups = {};
+  };
+  BlockPool.prototype.ensure = function (key, color, role, n) {
+    var g = this.groups[key];
+    var cap = 256;
+    while (cap < n) cap *= 2;
+    if (g && g.cap >= cap) return g;
+    if (g) {
+      this.root.remove(g.mesh);
+      g.mesh.geometry.dispose();
+    }
+    var mesh = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(1, 1, 1),
+      new THREE.MeshStandardMaterial({
+        color: '#ffffff',
+        map: texFor(color, role),
+        roughness: 0.85
+      }),
+      cap
+    );
+    mesh.frustumCulled = false;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    this.root.add(mesh);
+    g = { mesh: mesh, cap: cap, items: [] };
+    this.groups[key] = g;
+    return g;
+  };
+  BlockPool.prototype.setItems = function (key, color, role, items) {
+    var g = this.ensure(key, color, role, items.length);
+    g.items = items;
+    var n = Math.min(items.length, g.cap);
+    for (var i = 0; i < n; i++) {
+      var b = items[i];
+      this.dummy.position.set(b.x, b.y, b.z);
+      this.dummy.updateMatrix();
+      g.mesh.setMatrixAt(i, this.dummy.matrix);
+    }
+    g.mesh.count = n;
+    g.mesh.instanceMatrix.needsUpdate = true;
+    g.mesh.computeBoundingSphere();
+  };
+
+  function BuilderView(who, tint, root) {
+    this.who = who;
+    this.blocks = new Map();
+    this.pool = new BlockPool();
+    this.decorRoot = new THREE.Group();
+    this.walkRoot = new THREE.Group();
+    this.actor = makeBuilderMesh(tint);
+    this.actor.position.set(0, 0, 0);
+    this.target = { x: 0, y: 0, z: 0 };
+    this.yaw = 0;
+    this.level = null;
+    this.progress = 0;
+    this.awaiting = false;
+    this.idleCount = 0;
+    this.walk = null;
+    this.walkClock = 0;
+    root.add(this.pool.root);
+    root.add(this.decorRoot);
+    root.add(this.walkRoot);
+    root.add(this.actor);
+  }
+  BuilderView.prototype.resetScene = function () {
+    this.blocks.clear();
+    this.pool.clear();
+    while (this.decorRoot.children.length) this.decorRoot.remove(this.decorRoot.children[0]);
+    while (this.walkRoot.children.length) this.walkRoot.remove(this.walkRoot.children[0]);
+    this.walk = null;
+    this.walkClock = 0;
+    this.progress = 0;
+    this.awaiting = false;
+  };
+  BuilderView.prototype.applyLevel = function (lv) {
+    this.resetScene();
+    this.level = lv;
+    if (lv && lv.built) {
+      for (var i = 0; i < lv.built.length; i++) this.addBlock(lv.built[i]);
+      this.flushBlocks();
+    }
+    if (lv && lv.decorations) {
+      for (var j = 0; j < lv.decorations.length; j++) this.addDecor(lv.decorations[j]);
+    }
+    this.progress = (lv && lv.progress) || 0;
+    this.awaiting = !!(lv && lv.awaiting);
+    this.updateHud();
+  };
+  BuilderView.prototype.addBlock = function (b) {
+    this.blocks.set(b.x + ',' + b.y + ',' + b.z, b);
+  };
+  BuilderView.prototype.flushBlocks = function () {
+    var byKey = {};
+    this.blocks.forEach(function (b) {
+      var key = (b.color || '#888') + '|' + (b.role || 1);
+      if (!byKey[key]) byKey[key] = [];
+      byKey[key].push(b);
+    });
+    var seen = {};
+    for (var key in byKey) {
+      seen[key] = true;
+      var sample = byKey[key][0];
+      this.pool.setItems(key, sample.color, sample.role || 1, byKey[key]);
+    }
+    for (var old in this.pool.groups) {
+      if (!seen[old]) this.pool.setItems(old, '#000', 1, []);
+    }
+  };
+  BuilderView.prototype.addDecor = function (d) {
+    var pal = (this.level && this.level.palette) || {};
+    var mesh = makeProp(d.type, pal.accent);
+    mesh.position.set(d.x, 0, d.z);
+    this.decorRoot.add(mesh);
+  };
+  BuilderView.prototype.handleStep = function (data) {
+    if (data.world_reset) {
+      this.applyLevel(data.level);
+      return;
+    }
+    if (data.awaiting) {
+      if (!this.awaiting) say('finished', this.who);
+      this.awaiting = true;
+      this.progress = 1;
+      this.updateHud();
+      this.loadWalk();
+      return;
+    }
+    if (typeof data.progress === 'number') this.progress = data.progress;
+    if (data.blocks && data.blocks.length) {
+      for (var i = 0; i < data.blocks.length; i++) this.addBlock(data.blocks[i]);
+      this.flushBlocks();
+    }
+    if (data.decor && data.decor.length) {
+      for (var j = 0; j < data.decor.length; j++) this.addDecor(data.decor[j]);
+    }
+    if (data.kind === 'move') {
+      this.idleCount += 1;
+      if (this.idleCount % 60 === 0) say('thinking', this.who);
+    }
+    this.updateHud();
+  };
+  BuilderView.prototype.updateHud = function () {
+    var pct = Math.round((this.progress || 0) * 100);
+    var bar = document.getElementById('bar-' + this.who);
+    var lab = document.getElementById('pct-' + this.who);
+    var theme = document.getElementById('theme-' + this.who);
+    if (bar) bar.style.width = pct + '%';
+    if (lab) lab.textContent = pct + '%';
+    if (theme) {
+      var lv = this.level;
+      theme.textContent = (lv && (lv.found_style || lv.style_name)) || '—';
+    }
+  };
+  BuilderView.prototype.loadWalk = function () {
+    var self = this;
+    api('/walk', { who: this.who }).then(function (d) {
+      if (d && d.ok) self.spawnWalkers(d);
+    }).catch(function () {});
+  };
+  BuilderView.prototype.spawnWalkers = function (walk) {
+    while (this.walkRoot.children.length) this.walkRoot.remove(this.walkRoot.children[0]);
+    this.walk = walk;
+    this.walkClock = 0;
+    var pal = (this.level && this.level.palette && this.level.palette.accent) || '#ffd23f';
+    var base = new THREE.Color(pal);
+    var bodyG = new THREE.BoxGeometry(0.7, 1.4, 0.7);
+    var headG = new THREE.SphereGeometry(0.38, 10, 8);
+    for (var i = 0; i < (walk.walkers || 0); i++) {
+      var c = base.clone();
+      var hsl = {};
+      c.getHSL(hsl);
+      c.setHSL((hsl.h + i * 0.11) % 1, 0.55, 0.55);
+      var g = new THREE.Group();
+      var body = new THREE.Mesh(bodyG, new THREE.MeshStandardMaterial({
+        color: c, roughness: 0.5, emissive: c, emissiveIntensity: 0.4
+      }));
+      body.position.y = 0.7;
+      var head = new THREE.Mesh(headG, new THREE.MeshStandardMaterial({
+        color: c, roughness: 0.4, emissive: c, emissiveIntensity: 0.55
+      }));
+      head.position.y = 1.65;
+      g.add(body, head);
+      this.walkRoot.add(g);
+    }
+  };
+  BuilderView.prototype.tickWalk = function (dt) {
+    var frames = this.walk && this.walk.frames;
+    if (!frames || frames.length < 2) return;
+    this.walkClock += dt * 3.2;
+    var t = this.walkClock % (frames.length - 1);
+    var i = Math.floor(t);
+    var f = t - i;
+    var a = frames[i];
+    var b = frames[Math.min(i + 1, frames.length - 1)];
+    for (var k = 0; k < this.walkRoot.children.length; k++) {
+      if (!a[k] || !b[k]) continue;
+      var ch = this.walkRoot.children[k];
+      ch.position.x = a[k][0] + (b[k][0] - a[k][0]) * f;
+      ch.position.z = a[k][1] + (b[k][1] - a[k][1]) * f;
+    }
+  };
+  BuilderView.prototype.tickActor = function () {
+    var m = this.actor;
+    m.position.x += (this.target.x - m.position.x) * 0.15;
+    m.position.y += (this.target.y - m.position.y) * 0.15;
+    m.position.z += (this.target.z - m.position.z) * 0.15;
+    var diff = this.yaw - m.rotation.y;
+    while (diff > Math.PI) diff -= 2 * Math.PI;
+    while (diff < -Math.PI) diff += 2 * Math.PI;
+    m.rotation.y += diff * 0.2;
+  };
+
+  var messages = [];
+  function say(event, who) {
+    var phrase = nextPhrase(event);
+    if (!phrase) return;
+    var name = who === 'abel' ? 'Авель' : 'Кейн';
+    messages.push({ who: name, side: who === 'abel' ? 'abel' : 'caine', text: phrase });
+    if (messages.length > 40) messages = messages.slice(-40);
+    renderChat();
+  }
+  function renderChat() {
+    var el = document.getElementById('chat');
+    var vis = messages.slice(-2);
+    el.innerHTML = vis.map(function (m) {
+      return '<div class="bubble ' + m.side + '"><span class="who">' + m.who + '</span>' + m.text + '</div>';
+    }).join('');
+  }
+
+  var bootEl = document.getElementById('boot');
+  var bootSub = document.getElementById('boot-sub');
+  var bootErr = document.getElementById('boot-error');
+
+  if (typeof THREE === 'undefined') {
+    bootSub.textContent = 'Не завелось';
+    bootErr.hidden = false;
+    bootErr.textContent = 'Three.js не загрузился. Нужен интернет для первого запуска.';
+    return;
+  }
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(FOV, window.innerWidth / window.innerHeight, 0.5, 1600);
+  camera.position.set(0, 50, 60);
+  var renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.45;
+  renderer.shadowMap.enabled = false;
+  document.body.appendChild(renderer.domElement);
+
+  var controls = new THREE.OrbitControls(camera, renderer.domElement);
+  controls.enablePan = false;
+  controls.enableDamping = true;
+  controls.dampingFactor = 0.08;
+  controls.rotateSpeed = 0.55;
+  controls.zoomSpeed = 0.8;
+  controls.minPolarAngle = Math.PI * 0.12;
+  controls.maxPolarAngle = Math.PI * 0.46;
+  controls.target.set(0, 0, 0);
+
+  var skyMesh = makeSky('#111111');
+  scene.add(skyMesh);
+  scene.fog = new THREE.Fog('#111111', 260, 900);
+
+  var hemi = new THREE.HemisphereLight('#4a6fa5', '#2c2c3a', 0.8);
+  scene.add(hemi);
+  scene.add(new THREE.AmbientLight(0xffffff, 0.45));
+  var sun = new THREE.DirectionalLight('#fff2df', 2.1);
+  sun.position.set(70, 110, 55);
+  scene.add(sun);
+  scene.add(new THREE.DirectionalLight('#9fb8ff', 0.45)).position.set(-60, 45, -50);
+
+  var platCaine = makePlatform(false);
+  var platAbel = makePlatform(true);
+  platAbel.position.x = PLATFORM_GAP;
+  platAbel.visible = false;
+  scene.add(platCaine, platAbel);
+
+  var rootCaine = new THREE.Group();
+  var rootAbel = new THREE.Group();
+  rootAbel.position.x = PLATFORM_GAP;
+  rootAbel.visible = false;
+  scene.add(rootCaine, rootAbel);
+
+  var caine = new BuilderView('caine', '#ff4438', rootCaine);
+  var abel = new BuilderView('abel', '#5aa9ff', rootAbel);
+
+  var state = {
+    focus: 'caine',
+    hasAbel: false,
+    duel: null,
+    online: true,
+    started: false,
+    wantCam: null,
+    camJump: true
+  };
+
+  function setSky(color) {
+    scene.remove(skyMesh);
+    skyMesh.geometry.dispose();
+    skyMesh.material.dispose();
+    skyMesh = makeSky(color);
+    scene.add(skyMesh);
+    scene.background = new THREE.Color(color);
+    scene.fog.color.set(color);
+    hemi.color.set(color);
+  }
+
+  function shown() {
+    return state.focus === 'abel' && state.hasAbel ? abel : caine;
+  }
+
+  function frameCamera(jump) {
+    var lv = shown().level;
+    var b = lv && lv.bounds;
+    if (!b) return;
+    var aspect = window.innerWidth / window.innerHeight;
+    var fr = framing(b, aspect);
+    var px = state.focus === 'abel' && state.hasAbel ? PLATFORM_GAP : 0;
+    var cx = (b.minx + b.maxx) / 2 + px;
+    var cz = (b.minz + b.maxz) / 2;
+    var dist = fr.dist;
+    var pos = fr.sideways
+      ? new THREE.Vector3(cx + dist * 1.05, dist * 0.6, cz)
+      : new THREE.Vector3(cx, dist * 0.6, cz + dist * 1.05);
+    state.wantCam = { target: new THREE.Vector3(cx, 0, cz), pos: pos, dist: dist };
+    controls.minDistance = Math.max(12, dist * 0.28);
+    controls.maxDistance = dist * 2.6;
+    if (jump || state.camJump) {
+      camera.position.copy(pos);
+      controls.target.copy(state.wantCam.target);
+      controls.update();
+      state.camJump = false;
+    }
+  }
+
+  function setFocus(who) {
+    state.focus = who;
+    document.getElementById('btn-caine').classList.toggle('off', who !== 'caine');
+    document.getElementById('btn-abel').classList.toggle('off', who !== 'abel');
+    platCaine.children[0].material && (platCaine.visible = true);
+    var dimC = who !== 'caine';
+    var dimA = who !== 'abel';
+    platCaine.traverse(function (n) {
+      if (n.isMesh && n.material && n.material.color && n.geometry && n.geometry.type === 'PlaneGeometry')
+        n.material.color.set(dimC ? '#2a2a38' : '#3d3d50');
+    });
+    platAbel.traverse(function (n) {
+      if (n.isMesh && n.material && n.material.color && n.geometry && n.geometry.type === 'PlaneGeometry')
+        n.material.color.set(dimA ? '#2a2a38' : '#3d3d50');
+    });
+    var sky = shown().level && shown().level.sky;
+    if (sky) setSky(sky);
+    frameCamera(false);
+  }
+
+  document.getElementById('btn-caine').onclick = function () { setFocus('caine'); };
+  document.getElementById('btn-abel').onclick = function () { setFocus('abel'); };
+
+  function bothDone() {
+    return caine.awaiting && (!state.hasAbel || abel.awaiting);
+  }
+
+  function updateRebuild() {
+    var box = document.getElementById('rebuild');
+    var hint = document.getElementById('rebuild-hint');
+    var btn = document.getElementById('rebuild-btn');
+    var over = state.duel && state.duel.over;
+    if (bothDone() && !over) {
+      box.classList.add('show');
+      if (state.hasAbel) {
+        hint.textContent = ROUND_RESULT[(state.duel && state.duel.last && state.duel.last.winner)] || 'Считаю раунд…';
+        btn.textContent = 'Следующий раунд';
+      } else {
+        hint.textContent = 'Кейн закончил и ждёт';
+        btn.textContent = 'Построить снова';
+      }
+      btn.style.background = state.focus === 'abel'
+        ? 'linear-gradient(#6fa8ff, #3d8bff)'
+        : 'linear-gradient(#ff6a5e, #ff4438)';
+      btn.style.boxShadow = '0 6px 0 ' + (state.focus === 'abel' ? '#1a4fb8' : '#b81f18')
+        + ', 0 0 0 4px #16121c, 0 12px 26px rgba(0,0,0,0.45)';
+    } else {
+      box.classList.remove('show');
+    }
+  }
+
+  function updateScore() {
+    var box = document.getElementById('score-box');
+    if (!state.hasAbel) { box.hidden = true; return; }
+    box.hidden = false;
+    var d = state.duel || {};
+    var wins = d.wins || {};
+    document.getElementById('score-digits').textContent = (wins.caine || 0) + ' : ' + (wins.abel || 0);
+    var total = d.match_rounds || 5;
+    var playing = Math.min((d.round || 0) + (bothDone() || d.over ? 0 : 1), total);
+    document.getElementById('score-label').textContent = 'раунд ' + playing + ' из ' + total;
+  }
+
+  function updateVictory() {
+    var el = document.getElementById('victory');
+    var d = state.duel;
+    if (!d || !d.over) { el.classList.remove('show'); return; }
+    el.classList.add('show');
+    var champ = d.champion;
+    var draw = champ === 'ничья' || !champ;
+    document.getElementById('victory-title').textContent = draw ? 'Ничья' : 'Победа';
+    document.getElementById('victory-score').textContent = (d.wins.caine || 0) + ' : ' + (d.wins.abel || 0);
+    var badge = document.getElementById('victory-badge');
+    if (draw) { badge.hidden = true; }
+    else {
+      badge.hidden = false;
+      badge.textContent = champ === 'abel' ? 'Abel' : 'Caine';
+      badge.className = 'builder-btn outline ' + (champ === 'abel' ? 'abel' : 'caine') + ' left victory-badge';
+    }
+  }
+
+  var pollingDuel = false;
+  function pollDuel() {
+    if (!bothDone() || !state.hasAbel || pollingDuel) return;
+    pollingDuel = true;
+    var tries = 0;
+    function ask() {
+      if (++tries > 16) { pollingDuel = false; return; }
+      api('/duel').then(function (d) {
+        if (d && d.ok) {
+          state.duel = d;
+          updateScore();
+          updateRebuild();
+          updateVictory();
+          if (d.last) pollingDuel = false;
+          else setTimeout(ask, 800);
+        } else setTimeout(ask, 800);
+      }).catch(function () { setTimeout(ask, 1200); });
+    }
+    ask();
+  }
+
+  document.getElementById('rebuild-btn').onclick = function () {
+    if (state.duel) state.duel.last = null;
+    startNew('caine');
+    if (state.hasAbel) startNew('abel');
+    updateRebuild();
+  };
+  document.getElementById('victory-again').onclick = function () {
+    api('/duel/reset').then(function (d) {
+      if (!d.ok) return;
+      state.duel = d;
+      reload('caine');
+      if (state.hasAbel) reload('abel');
+      updateScore();
+      updateVictory();
+      updateRebuild();
+    }).catch(function () {});
+  };
+
+  function startNew(who) {
+    var view = who === 'abel' ? abel : caine;
+    api('/next', { who: who }).then(function (res) {
+      if (res.ok) view.applyLevel(res.level);
+      if (view === shown() && res.level && res.level.sky) setSky(res.level.sky);
+      frameCamera(false);
+      updateRebuild();
+    }).catch(function (e) { console.error(e); });
+  }
+  function reload(who) {
+    var view = who === 'abel' ? abel : caine;
+    api('/level', { who: who }).then(function (lv) {
+      if (lv) view.applyLevel(lv);
+      if (view === shown() && lv && lv.sky) setSky(lv.sky);
+      frameCamera(true);
+    }).catch(function () {});
+  }
+
+  var tempo = 80;
+  var inFlight = { caine: false, abel: false };
+
+  function tickWho(who) {
+    var view = who === 'abel' ? abel : caine;
+    if (inFlight[who] || (who === 'abel' && !state.hasAbel)) return;
+    inFlight[who] = true;
+    api('/step', { who: who }).then(function (data) {
+      setOnline(true);
+      var dx = data.x - view.target.x;
+      var dz = data.z - view.target.z;
+      if (dx || dz) view.yaw = Math.atan2(dx, dz);
+      view.target.x = data.x;
+      view.target.y = (data.y || 0);
+      view.target.z = data.z;
+      var wasAwait = view.awaiting;
+      view.handleStep(data);
+      if (view === shown() && data.level && data.level.sky) setSky(data.level.sky);
+      if (data.world_reset || (data.level && data.level.bounds)) frameCamera(!!data.world_reset);
+      if (!wasAwait && view.awaiting) pollDuel();
+      updateRebuild();
+      updateScore();
+    }).catch(function () {
+      setOnline(false);
+    }).then(function () {
+      inFlight[who] = false;
+    });
+  }
+
+  function setOnline(ok) {
+    if (state.online === ok) return;
+    state.online = ok;
+    document.getElementById('offline').classList.toggle('show', !ok);
+  }
+
+  var last = performance.now();
+  function loop(now) {
+    requestAnimationFrame(loop);
+    var dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    caine.tickActor();
+    abel.tickActor();
+    caine.tickWalk(dt);
+    abel.tickWalk(dt);
+    if (state.wantCam) {
+      var w = state.wantCam;
+      var k = 1 - Math.exp(-2.4 * dt);
+      if (controls.target.distanceTo(w.target) > 0.05) {
+        var shift = w.target.clone().sub(controls.target).multiplyScalar(k);
+        controls.target.add(shift);
+        camera.position.add(shift);
+      }
+    }
+    controls.update();
+    renderer.render(scene, camera);
+  }
+  requestAnimationFrame(loop);
+
+  window.addEventListener('resize', function () {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    frameCamera(false);
+  });
+
+  function boot() {
+    bootSub.textContent = 'Подключаюсь к Кейну…';
+    var tries = 0;
+    function ping() {
+      api('/builders').then(function (d) {
+        if (d && d.booting) {
+          bootSub.textContent = 'Проектирую первую карту…';
+          setTimeout(ping, 400);
+          return;
+        }
+        if (!d || d.ok === false) throw new Error(d && d.error || 'движок не отвечает');
+        state.hasAbel = !!(d.duel && d.builders && d.builders.length > 1);
+        document.getElementById('side-abel').hidden = !state.hasAbel;
+        rootAbel.visible = state.hasAbel;
+        platAbel.visible = state.hasAbel;
+        return api('/config').then(function (c) {
+          tempo = (c && c.tempo_ms) || 80;
+          return Promise.all([
+            api('/level', { who: 'caine' }),
+            state.hasAbel ? api('/level', { who: 'abel' }) : Promise.resolve(null)
+          ]);
+        }).then(function (levels) {
+          caine.applyLevel(levels[0]);
+          if (levels[1]) abel.applyLevel(levels[1]);
+          if (levels[0] && levels[0].sky) setSky(levels[0].sky);
+          bootEl.classList.add('hide');
+          document.getElementById('ui').hidden = false;
+          state.started = true;
+          say('welcome', 'caine');
+          frameCamera(true);
+          updateScore();
+          setInterval(function () { tickWho('caine'); }, tempo);
+          if (state.hasAbel) setInterval(function () { tickWho('abel'); }, tempo);
+        });
+      }).catch(function (err) {
+        tries += 1;
+        if (tries < 40) {
+          bootSub.textContent = 'Жду main.py…';
+          setTimeout(ping, 500);
+        } else {
+          bootSub.textContent = 'Не завелось';
+          bootErr.hidden = false;
+          bootErr.textContent = err.message || String(err);
+        }
+      });
+    }
+    ping();
+  }
+  boot();
+})();
+  </script>
+</body>
+</html>
